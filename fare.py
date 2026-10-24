@@ -1,26 +1,9 @@
-"""fare.py - Core mathematical fare calculation engine for CLIPY.
-
-This module implements pure mathematical logic for calculating railway ticket fares.
-It operates independently of any terminal I/O or user prompts. All calculations
-use Python's Decimal type to guarantee financial precision and avoid floating-point errors.
-
-Calculation Order:
-1. Distance-based Slab Fare
-2. Senior Citizen Discount (strictly age > 60)
-3. Train Premium Multiplier
-4. Travel Class Multiplier
-5. Excess Baggage Fee
-6. Flat Train Surcharge (per-passenger)
-Followed by:
-- Booking subtotal aggregation
-- Optional promotional discounts (ADG20, WINTER500)
-- Final payable amount
-"""
+"""Fare calculation formulas and promotional discounts for CLIPY."""
 
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Dict, Optional, Tuple, Union
 
-# Constant rates and limits
+# Rates and thresholds
 BASE_FARE = Decimal("100.00")
 SLAB_1_KM_LIMIT = Decimal("100.00")
 SLAB_1_RATE = Decimal("1.00")
@@ -30,36 +13,32 @@ SLAB_3_RATE = Decimal("0.60")
 
 SENIOR_AGE_THRESHOLD = 60
 SENIOR_DISCOUNT_PERCENT = Decimal("0.40")
-SENIOR_FARE_FACTOR = Decimal("1.00") - SENIOR_DISCOUNT_PERCENT  # 0.60
+SENIOR_FARE_FACTOR = Decimal("1.00") - SENIOR_DISCOUNT_PERCENT
 
 BAGGAGE_RATE_PER_KG = Decimal("15.00")
-
 TWO_PLACES = Decimal("0.01")
 
 
 def _to_decimal(value: Union[int, float, str, Decimal]) -> Decimal:
-    """Safely convert any numeric input to Decimal."""
+    """Helper to ensure numbers are Decimal instances."""
     if isinstance(value, Decimal):
         return value
     return Decimal(str(value))
 
 
 def _round_currency(amount: Decimal) -> Decimal:
-    """Round currency amount to two decimal places using standard half-up rounding."""
+    """Rounds an amount to 2 decimal places."""
     return amount.quantize(TWO_PLACES, rounding=ROUND_HALF_UP)
 
 
-# --- Step 1: Slab Fare ---
+# --- Step 1: Distance Slab Fare ---
 def calculate_slab_fare(distance: Union[int, float, str, Decimal]) -> Decimal:
-    """Calculate the distance-based cumulative slab fare.
+    """Calculates the cumulative distance slab fare.
 
-    Formula:
     - Base fare: INR 100.00
-    - First 100 km: INR 1.00 / km
-    - Next 200 km (101 - 300 km): INR 0.80 / km
-    - Distance beyond 300 km: INR 0.60 / km
-
-    Raises ValueError if distance is negative.
+    - 0 to 100 km: INR 1.00/km
+    - 101 to 300 km: INR 0.80/km
+    - Beyond 300 km: INR 0.60/km
     """
     d = _to_decimal(distance)
     if d < Decimal("0"):
@@ -76,11 +55,7 @@ def calculate_slab_fare(distance: Union[int, float, str, Decimal]) -> Decimal:
 
 # --- Step 2: Senior Citizen Discount ---
 def apply_senior_citizen_discount(fare: Decimal, age: int) -> Decimal:
-    """Apply senior citizen discount (40% off) if age is STRICTLY GREATER than 60.
-
-    Passengers aged 60 or below receive no discount.
-    Formula: Step 2 fare = Step 1 fare * 0.60
-    """
+    """Applies 40% senior discount if age is strictly greater than 60."""
     if age < 0:
         raise ValueError("Age cannot be negative.")
 
@@ -92,32 +67,20 @@ def apply_senior_citizen_discount(fare: Decimal, age: int) -> Decimal:
 
 # --- Step 3: Train Premium ---
 def apply_train_premium(fare: Decimal, train_multiplier: Union[float, str, Decimal]) -> Decimal:
-    """Apply the train type multiplier to the Step 2 fare.
-
-    Fast Passenger: 1.00
-    Express: 1.25
-    Superfast: 1.50
-    """
+    """Multiplies fare by the train service multiplier."""
     multiplier = _to_decimal(train_multiplier)
     if multiplier <= Decimal("0"):
         raise ValueError("Train multiplier must be positive.")
-    result = fare * multiplier
-    return _round_currency(result)
+    return _round_currency(fare * multiplier)
 
 
 # --- Step 4: Class Multiplier ---
 def apply_class_multiplier(fare: Decimal, class_multiplier: Union[float, str, Decimal]) -> Decimal:
-    """Apply the travel class multiplier to the Step 3 fare.
-
-    Sleeper: 1.0
-    AC 3-Tier: 1.5
-    AC 2-Tier: 2.0
-    """
+    """Multiplies fare by the travel class multiplier."""
     multiplier = _to_decimal(class_multiplier)
     if multiplier <= Decimal("0"):
         raise ValueError("Class multiplier must be positive.")
-    result = fare * multiplier
-    return _round_currency(result)
+    return _round_currency(fare * multiplier)
 
 
 # --- Step 5: Excess Baggage Fee ---
@@ -125,11 +88,7 @@ def calculate_excess_baggage_charges(
     baggage_weight: Union[int, float, str, Decimal],
     free_allowance: Union[int, float, str, Decimal],
 ) -> Decimal:
-    """Calculate baggage fee based on weight and free allowance.
-
-    Baggage weight must be strictly positive (> 0).
-    Fee = max(0, weight - allowance) * INR 15.00
-    """
+    """Calculates excess baggage charges at INR 15 per kg over allowance."""
     weight = _to_decimal(baggage_weight)
     allowance = _to_decimal(free_allowance)
 
@@ -143,21 +102,16 @@ def calculate_excess_baggage_charges(
     return _round_currency(fee)
 
 
-# --- Step 6: Flat Train Surcharge ---
+# --- Step 6: Train Surcharge ---
 def apply_train_surcharge(fare: Decimal, surcharge: Union[int, float, str, Decimal]) -> Decimal:
-    """Add flat per-passenger train surcharge to Step 5 fare.
-
-    Superfast: INR 100.00
-    Express: INR 50.00
-    Fast Passenger: INR 0.00
-    """
+    """Adds the flat per-passenger train surcharge."""
     sc = _to_decimal(surcharge)
     if sc < Decimal("0"):
         raise ValueError("Surcharge cannot be negative.")
     return _round_currency(fare + sc)
 
 
-# --- Complete Passenger Fare Calculation ---
+# --- Complete Fare Calculation ---
 def calculate_complete_passenger_fare(
     distance: int,
     age: int,
@@ -167,11 +121,8 @@ def calculate_complete_passenger_fare(
     free_allowance: Union[float, str, Decimal],
     train_surcharge: Union[int, float, str, Decimal],
 ) -> Dict[str, object]:
-    """Execute all six fare calculation steps in exact required sequence for one passenger.
-
-    Returns a comprehensive breakdown dictionary containing intermediate and final values.
-    """
-    # Step 1: Slab Fare
+    """Calculates the complete 6-step fare for one passenger."""
+    # Step 1: Base + Distance Slab Fare
     step1_slab_fare = calculate_slab_fare(distance)
     distance_charge = step1_slab_fare - BASE_FARE
 
@@ -184,7 +135,7 @@ def calculate_complete_passenger_fare(
     t_mult = _to_decimal(train_multiplier)
     step3_fare = apply_train_premium(step2_fare, t_mult)
 
-    # Step 4: Class Premium
+    # Step 4: Class Multiplier
     c_mult = _to_decimal(class_multiplier)
     step4_fare = apply_class_multiplier(step3_fare, c_mult)
 
@@ -222,25 +173,11 @@ def calculate_complete_passenger_fare(
     }
 
 
-# --- Promotional Discounts ---
+# --- Promo Codes ---
 def apply_promotional_discount(
     subtotal: Decimal, promo_code: Optional[str]
 ) -> Tuple[Decimal, Decimal, str, str]:
-    """Calculate promotional discount on booking subtotal.
-
-    Supported codes:
-    - 'ADG20': 20% discount on subtotal
-    - 'WINTER500': Flat INR 500 discount (capped at subtotal)
-
-    Rules:
-    - Case-insensitive, leading/trailing whitespace ignored.
-    - Empty or None entry: no discount.
-    - Invalid nonempty code: 0 discount, reported as invalid.
-    - Final payable amount never becomes negative.
-
-    Returns:
-    (discount_amount, final_payable, normalized_code, status_message)
-    """
+    """Applies valid promo code (ADG20 or WINTER500) to subtotal."""
     sub = _round_currency(_to_decimal(subtotal))
     if sub < Decimal("0"):
         raise ValueError("Subtotal cannot be negative.")
@@ -261,7 +198,6 @@ def apply_promotional_discount(
         final_payable = calculate_final_payable(sub, discount)
         return discount, final_payable, normalized, "Flat INR 500 discount applied."
 
-    # Invalid code
     return (
         Decimal("0.00"),
         sub,
@@ -271,7 +207,7 @@ def apply_promotional_discount(
 
 
 def calculate_final_payable(subtotal: Decimal, discount_amount: Decimal) -> Decimal:
-    """Calculate final payable amount, ensuring it never drops below INR 0.00."""
+    """Calculates final total after discount, ensuring it never goes below zero."""
     sub = _round_currency(_to_decimal(subtotal))
     disc = _round_currency(_to_decimal(discount_amount))
     return max(Decimal("0.00"), sub - disc)

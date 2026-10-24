@@ -1,11 +1,6 @@
-"""booking.py - Booking domain logic and passenger management for CLIPY.
+"""Booking management and passenger data handling."""
 
-This module coordinates ticket bookings, manages passenger rosters, interacts
-with routes and fare calculation engines, and prepares structured booking summaries.
-It separates business logic from terminal rendering.
-"""
-
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from decimal import Decimal
 import random
 import string
@@ -25,7 +20,7 @@ from fare import (
 
 @dataclass
 class Passenger:
-    """Represents an individual passenger within a booking."""
+    """Stores individual passenger information."""
 
     name: str
     age: int
@@ -45,7 +40,7 @@ class Passenger:
 
 
 class Booking:
-    """Coordinates a railway journey booking for one or more passengers."""
+    """Manages the booking workflow for a journey and its passengers."""
 
     def __init__(
         self,
@@ -59,28 +54,28 @@ class Booking:
         self.train_type = train_type
         self.travel_class = travel_class
 
-        # Validate and retrieve static route and service configurations
+        # Fetch route details
         self.distance: int = get_distance(self.source, self.destination)
         self.train_info: Dict[str, Any] = get_train_info(self.train_type)
         self.class_info: Dict[str, Any] = get_class_info(self.travel_class)
 
-        # Travel time
+        # Calculate estimated journey time
         speed = int(self.train_info["speed"])
         self.travel_time: Tuple[int, int] = calculate_travel_time(self.distance, speed)
 
-        # Passenger collection
+        # Passenger list
         self.passengers: List[Passenger] = []
 
-        # Pricing states
+        # Totals and discounts
         self.subtotal: Decimal = Decimal("0.00")
         self.promo_code: Optional[str] = None
         self.promo_discount: Decimal = Decimal("0.00")
         self.promo_message: str = "No promo code applied."
         self.final_total: Decimal = Decimal("0.00")
 
-        # Locally generated demonstration reference (NOT an official PNR)
-        suffix = "".join(random.choices(string.ascii_uppercase + string.digits, k=6))
-        self.reference_id: str = f"DEMO-CLP-{suffix}"
+        # Demo reference ID
+        random_suffix = "".join(random.choices(string.ascii_uppercase + string.digits, k=6))
+        self.reference_id: str = f"DEMO-CLP-{random_suffix}"
 
     def add_passenger(
         self,
@@ -88,16 +83,13 @@ class Booking:
         age: int,
         baggage_weight: Union[Decimal, float, str],
     ) -> Passenger:
-        """Create and add a passenger to the booking."""
+        """Adds a new passenger to the booking."""
         p = Passenger(name=name, age=age, baggage_weight=Decimal(str(baggage_weight)))
         self.passengers.append(p)
         return p
 
     def calculate_all_fares(self) -> Decimal:
-        """Calculate individual fares for all passengers and aggregate subtotal.
-
-        Requires at least one passenger to be present.
-        """
+        """Calculates fares for each passenger and sums the subtotal."""
         if not self.passengers:
             raise ValueError("Cannot calculate fares without passengers.")
 
@@ -122,7 +114,7 @@ class Booking:
 
         self.subtotal = running_subtotal
 
-        # Re-apply promo if already set, else default final total to subtotal
+        # Re-apply discount if a promo was already entered
         if self.promo_code:
             self.apply_promo(self.promo_code)
         else:
@@ -131,7 +123,7 @@ class Booking:
         return self.subtotal
 
     def apply_promo(self, code: Optional[str]) -> Tuple[Decimal, Decimal, str]:
-        """Apply promotional code to booking subtotal."""
+        """Applies a promo code and updates the final total."""
         discount, final_payable, normalized_code, message = apply_promotional_discount(
             self.subtotal, code
         )
@@ -142,7 +134,7 @@ class Booking:
         return discount, final_payable, message
 
     def get_summary(self) -> Dict[str, Any]:
-        """Export full structured booking summary."""
+        """Returns structured summary dictionary of the booking."""
         return {
             "reference_id": self.reference_id,
             "source": self.source,

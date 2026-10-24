@@ -1,11 +1,4 @@
-"""routes.py - Static configuration data and lookup helpers for CLIPY.
-
-This module centrally manages:
-- Available railway stations (cities) and bidirectional distances.
-- Train types, speeds, multipliers, and flat surcharges.
-- Travel classes, fare multipliers, and free baggage allowances.
-- Reusable lookup and travel-time calculation functions.
-"""
+"""Railway network configuration, train specifications, and class definitions."""
 
 from decimal import Decimal
 from typing import Dict, List, Optional, Tuple
@@ -19,8 +12,7 @@ CITIES: List[str] = [
     "Hyderabad",
 ]
 
-# Bidirectional route distances in kilometres
-# Stored with sorted tuple keys (city_a, city_b) where city_a < city_b
+# Route distances in kilometers (bidirectional)
 _ROUTE_DISTANCES: Dict[Tuple[str, str], int] = {
     ("Mumbai", "New Delhi"): 1460,
     ("Kolkata", "New Delhi"): 1525,
@@ -34,54 +26,50 @@ _ROUTE_DISTANCES: Dict[Tuple[str, str], int] = {
     ("Chennai", "Hyderabad"): 633,
 }
 
-# Train specifications: average speed, premium multiplier, and flat surcharge
+# Train specifications
 TRAIN_TYPES: Dict[str, Dict[str, object]] = {
     "Superfast": {
-        "speed": 120,  # km/h
+        "speed": 120,
         "premium_multiplier": Decimal("1.50"),
         "surcharge": Decimal("100.00"),
         "description": "High-speed service (120 km/h)",
     },
     "Express": {
-        "speed": 110,  # km/h
+        "speed": 110,
         "premium_multiplier": Decimal("1.25"),
         "surcharge": Decimal("50.00"),
         "description": "Standard express service (110 km/h)",
     },
     "Fast Passenger": {
-        "speed": 90,  # km/h
+        "speed": 90,
         "premium_multiplier": Decimal("1.00"),
         "surcharge": Decimal("0.00"),
         "description": "Regular passenger service (90 km/h)",
     },
 }
 
-# Travel class specifications: fare multiplier and free baggage allowance
+# Travel classes
 TRAVEL_CLASSES: Dict[str, Dict[str, object]] = {
     "Sleeper": {
         "multiplier": Decimal("1.0"),
-        "baggage_allowance": Decimal("20.0"),  # kg
+        "baggage_allowance": Decimal("20.0"),
         "description": "Standard non-AC sleeper coach",
     },
     "AC 3-Tier": {
         "multiplier": Decimal("1.5"),
-        "baggage_allowance": Decimal("30.0"),  # kg
+        "baggage_allowance": Decimal("30.0"),
         "description": "Air-conditioned 3-tier sleeper",
     },
     "AC 2-Tier": {
         "multiplier": Decimal("2.0"),
-        "baggage_allowance": Decimal("40.0"),  # kg
+        "baggage_allowance": Decimal("40.0"),
         "description": "Air-conditioned 2-tier sleeper",
     },
 }
 
 
 def normalize_city_name(city_input: str) -> Optional[str]:
-    """Normalize user input to match canonical city name.
-
-    Handles leading/trailing whitespace and case-insensitive matching.
-    Returns canonical city name if found, else None.
-    """
+    """Matches user input to a valid city name, ignoring case and whitespace."""
     cleaned = city_input.strip().lower()
     for city in CITIES:
         if city.lower() == cleaned:
@@ -90,16 +78,12 @@ def normalize_city_name(city_input: str) -> Optional[str]:
 
 
 def get_cities() -> List[str]:
-    """Return a copy of the list of supported cities."""
+    """Returns the list of supported cities."""
     return list(CITIES)
 
 
 def get_distance(source: str, destination: str) -> int:
-    """Retrieve the distance in km between source and destination.
-
-    Routes are bidirectional.
-    Raises ValueError if cities are invalid, identical, or not connected.
-    """
+    """Returns the distance in km between source and destination (bidirectional)."""
     norm_source = normalize_city_name(source)
     norm_dest = normalize_city_name(destination)
 
@@ -111,7 +95,6 @@ def get_distance(source: str, destination: str) -> int:
     if norm_source == norm_dest:
         raise ValueError("Source and destination cannot be the same city.")
 
-    # Canonical order for dictionary key
     key = tuple(sorted([norm_source, norm_dest]))
     if key in _ROUTE_DISTANCES:
         return _ROUTE_DISTANCES[key]
@@ -120,7 +103,7 @@ def get_distance(source: str, destination: str) -> int:
 
 
 def get_available_destinations(source: str) -> List[str]:
-    """Return list of valid destinations reachable from given source."""
+    """Returns all destinations connected to the given source."""
     norm_source = normalize_city_name(source)
     if not norm_source:
         raise ValueError(f"Invalid source city '{source}'.")
@@ -135,11 +118,7 @@ def get_available_destinations(source: str) -> List[str]:
 
 
 def calculate_travel_time(distance: int, speed: int) -> Tuple[int, int]:
-    """Calculate estimated travel time in hours and minutes.
-
-    Formula: Travel time in hours = distance / speed.
-    Returns: (hours, minutes)
-    """
+    """Calculates journey duration in hours and minutes."""
     if speed <= 0:
         raise ValueError("Train speed must be strictly positive.")
     if distance < 0:
@@ -152,7 +131,7 @@ def calculate_travel_time(distance: int, speed: int) -> Tuple[int, int]:
 
 
 def format_travel_time(hours: int, minutes: int) -> str:
-    """Format travel time into a friendly string (e.g. '12 hrs 10 mins')."""
+    """Formats hours and minutes into readable text (e.g., '12 hrs 10 mins')."""
     parts = []
     if hours > 0:
         parts.append(f"{hours} hr{'s' if hours != 1 else ''}")
@@ -162,7 +141,7 @@ def format_travel_time(hours: int, minutes: int) -> str:
 
 
 def get_train_info(train_type: str) -> Dict[str, object]:
-    """Return specifications for a train type, or raise ValueError."""
+    """Returns train service specifications."""
     for name, info in TRAIN_TYPES.items():
         if name.lower() == train_type.strip().lower():
             return {"name": name, **info}
@@ -170,7 +149,7 @@ def get_train_info(train_type: str) -> Dict[str, object]:
 
 
 def get_class_info(travel_class: str) -> Dict[str, object]:
-    """Return specifications for a travel class, or raise ValueError."""
+    """Returns travel class specifications."""
     for name, info in TRAVEL_CLASSES.items():
         if name.lower() == travel_class.strip().lower():
             return {"name": name, **info}
