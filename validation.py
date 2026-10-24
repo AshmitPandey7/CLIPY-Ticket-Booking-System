@@ -28,6 +28,11 @@ YELLOW = "\033[93m"
 RESET = "\033[0m"
 
 
+class CancelBooking(Exception):
+    """Raised when the user cancels or exits the booking midway."""
+    pass
+
+
 # --- Validation Functions ---
 def validate_passenger_name(name_str: str) -> str:
     """Validates that a passenger name contains letters and is 1-50 chars."""
@@ -125,19 +130,25 @@ def validate_route_pair(source: str, destination: str) -> int:
 
 # --- Prompters ---
 def prompt_input(prompt_text: str) -> str:
-    """Wrapper around input."""
-    return input(prompt_text)
+    """Wrapper around input that supports cancelling/exiting midway."""
+    raw = input(prompt_text)
+    if raw.strip().lower() in ("exit", "quit"):
+        raise CancelBooking()
+    return raw
 
 
 def prompt_city(
     prompt_text: str,
     available_cities: List[str],
     disallowed_city: Optional[str] = None,
+    allow_exit: bool = False,
 ) -> str:
     """Prompts user to select a city, reprompting on invalid choice."""
     while True:
         try:
             raw = prompt_input(prompt_text)
+            if allow_exit and raw.strip() in ("0", "exit", "quit", "q"):
+                raise CancelBooking()
             chosen = validate_city_choice(raw, available_cities)
             if disallowed_city and chosen.lower() == disallowed_city.lower():
                 print(

@@ -13,6 +13,7 @@ from routes import (
 )
 from booking import Booking
 from validation import (
+    CancelBooking,
     prompt_city,
     prompt_input,
     prompt_menu_selection,
@@ -65,10 +66,11 @@ def print_header() -> None:
 
 
 def display_cities(cities: List[str]) -> None:
-    """Prints available railway stations."""
+    """Prints available railway stations and exit option."""
     print(f"\n{BOLD}{WHITE}Supported Stations:{RESET}")
     for i, city in enumerate(cities, start=1):
         print(f"  {CYAN}{i}.{RESET} {city}")
+    print(f"  {CYAN}0.{RESET} {DIM}Exit Application (or type 'exit' anytime to cancel){RESET}")
 
 
 def display_train_types(train_keys: List[str]) -> None:
@@ -188,11 +190,17 @@ def run_booking_flow() -> None:
     display_cities(cities)
 
     # Station selection
-    source = prompt_city(f"\n{BOLD}Select Origin station (number or name): {RESET}", cities)
+    source = prompt_city(
+        f"\n{BOLD}Select Origin station (1-{len(cities)} or 0 to exit): {RESET}",
+        cities,
+        allow_exit=True,
+    )
     print(f"  -> Origin: {GREEN}{source}{RESET}")
 
     destination = prompt_city(
-        f"{BOLD}Select Destination station (number or name): {RESET}", cities, disallowed_city=source
+        f"{BOLD}Select Destination station (1-{len(cities)}): {RESET}",
+        cities,
+        disallowed_city=source,
     )
     print(f"  -> Destination: {GREEN}{destination}{RESET}")
 
@@ -278,6 +286,9 @@ def main() -> None:
                 break
             print("\n" * 2)
             print_header()
+        except CancelBooking:
+            print(f"\n{YELLOW}Booking cancelled. Exiting CLIPY. Safe travels!{RESET}\n")
+            break
         except (KeyboardInterrupt, EOFError):
             print(f"\n\n{YELLOW}Session cancelled by user. Exiting CLIPY.{RESET}")
             sys.exit(0)
