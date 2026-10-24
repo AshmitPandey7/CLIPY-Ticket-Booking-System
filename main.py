@@ -43,17 +43,18 @@ RED = "\033[91m"
 WHITE = "\033[97m"
 
 
-def render_progress(task_name: str, duration: float = 0.35) -> None:
-    """Displays a clean progress bar for terminal feedback."""
-    steps = 22
-    delay = duration / steps
-    for i in range(steps + 1):
-        bar = "#" * i + "-" * (steps - i)
-        percent = int((i / steps) * 100)
-        sys.stdout.write(f"\r  {CYAN}{task_name:<28}{RESET} [{GREEN}{bar}{RESET}] {percent:>3}%")
+def render_progress(task_name: str) -> None:
+    """Displays a clean loading bar for terminal feedback."""
+    if not sys.stdout.isatty():
+        return
+    sys.stdout.write(f"\n  {CYAN}{task_name:<28}{RESET} [")
+    sys.stdout.flush()
+    for _ in range(15):
+        sys.stdout.write(f"{GREEN}={RESET}")
         sys.stdout.flush()
-        time.sleep(delay)
-    sys.stdout.write("\n")
+        time.sleep(0.015)
+    sys.stdout.write(f"] {GREEN}Done!{RESET}\n")
+    sys.stdout.flush()
 
 
 def print_header() -> None:
@@ -235,7 +236,6 @@ def run_booking_flow() -> None:
         booking.add_passenger(name, age, weight)
 
     # Calculate fares
-    print()
     render_progress("Calculating passenger fares...")
     booking.calculate_all_fares()
 
@@ -260,7 +260,6 @@ def run_booking_flow() -> None:
         booking.apply_promo(None)
 
     # Final receipt
-    print()
     render_progress("Generating booking receipt...")
     display_final_receipt(booking)
 

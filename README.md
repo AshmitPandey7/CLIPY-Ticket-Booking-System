@@ -1,20 +1,57 @@
 # CLIPY - Modular Railway Ticket Booking System
 
-A modular command-line railway ticket booking system in Python that simulates journey reservations across five major Indian cities. It handles route distances, train types, travel classes, individual passenger fare calculations, baggage charges, and promotional discounts.
+A modular command-line railway ticket booking system in Python that simulates journey reservations across five major Indian cities. It calculates individual passenger fares based on distance slabs, age concessions, train speed premiums, travel classes, excess baggage charges, and promotional discounts.
+
+---
+
+## Quick Start (How to Run on Your Machine)
+
+### 1. Clone the Repository
+```bash
+git clone https://github.com/AshmitPandey7/CLIPY-Ticket-Booking-System.git
+cd CLIPY-Ticket-Booking-System
+```
+
+### 2. Run the Program
+CLIPY is built entirely with Python's standard library. No `pip install` or external packages are required to run the application or test suite.
+
+**Windows:**
+```bash
+python main.py
+```
+*(or `py main.py`)*
+
+**Linux / macOS:**
+```bash
+python3 main.py
+```
+
+### 3. Run the Tests
+To run the automated unit test suite (47 tests):
+
+**Windows:**
+```bash
+python -m unittest discover -s tests -v
+```
+
+**Linux / macOS:**
+```bash
+python3 -m unittest discover -s tests -v
+```
 
 ---
 
 ## Features
 
-- **Bidirectional Routes**: Supports journeys between 5 major stations (New Delhi, Mumbai, Kolkata, Chennai, Hyderabad) across 10 routes.
-- **Train Services**: Superfast (120 km/h), Express (110 km/h), and Fast Passenger (90 km/h) with travel time estimates.
-- **Travel Classes**: Sleeper, AC 3-Tier, and AC 2-Tier with specific fare multipliers and baggage allowances.
-- **6-Step Fare Calculation**: Uses Python's `Decimal` module for precision and standard half-up rounding.
-- **Senior Citizen Concession**: Automatically gives a 40% discount on the slab fare for travelers strictly above 60 years old.
-- **Excess Baggage Fee**: Per-passenger excess luggage charges (INR 15/kg).
-- **Promo Codes**: Optional discount codes (`ADG20` and `WINTER500`).
-- **Input Validation**: Clean error messages that reprompt on invalid inputs without crashing.
-- **Colorized CLI**: Styled terminal interface with colored badges and a progress bar.
+- **Bidirectional Routes**: 10 routes connecting New Delhi, Mumbai, Kolkata, Chennai, and Hyderabad.
+- **Train Services**: Superfast (120 km/h), Express (110 km/h), and Fast Passenger (90 km/h) with travel duration estimates.
+- **Travel Classes**: Sleeper, AC 3-Tier, and AC 2-Tier with distinct fare multipliers and free baggage allowances.
+- **6-Step Fare Calculation**: Uses Python's `Decimal` module for currency precision and half-up rounding.
+- **Senior Citizen Concession**: Automatic 40% discount on the slab fare for travelers strictly above 60 years of age.
+- **Excess Baggage Fee**: Per-passenger luggage assessment (INR 15 per excess kg).
+- **Promotional Discounts**: Supports `ADG20` (20% off subtotal) and `WINTER500` (flat INR 500 off subtotal).
+- **Crash-Proof Input Validation**: Friendly reprompts on invalid entries without unexpected crashes.
+- **Styled Terminal Interface**: Clean colored badges and a progress bar.
 
 ---
 
@@ -23,63 +60,22 @@ A modular command-line railway ticket booking system in Python that simulates jo
 ```
 CLIPY-Ticket-Booking-System/
 │
-├── main.py                    # Entry point and CLI coordinator
-├── routes.py                  # Stations, distances, trains, and classes
-├── fare.py                    # 6-step fare calculations and promo discounts
-├── booking.py                 # Passenger roster and booking management
-├── validation.py              # Input validation helpers and terminal prompts
-├── README.md                  # Project documentation and instructions
-├── .gitignore                 # Python gitignore
+├── main.py                    # Application entry point and CLI coordinator
+├── routes.py                  # Static stations, distances, train types, and classes
+├── fare.py                    # 6-step mathematical fare calculations and discounts
+├── booking.py                 # Passenger roster and booking state management
+├── validation.py              # Input validation rules and interactive prompts
+├── README.md                  # Project overview and run guide
+├── .gitignore                 # Standard Python gitignore
 └── tests/
-    └── test_booking_system.py # Automated unittest suite (47 tests)
+    └── test_booking_system.py # Automated test suite (47 unit and integration tests)
 ```
 
 ---
 
-## Requirements
+## Route Network & Distances
 
-- Python 3.8 or higher.
-- Built with Python's standard library. No external packages are required to run the core program or test suite.
-- *(Optional)* `colorama` for enhanced color support on legacy Windows terminals (standard ANSI colors work out-of-the-box on modern Windows 10/11, Linux, and macOS).
-
----
-
-## How to Run
-
-### 1. Run the Application
-
-On Windows:
-```bash
-python main.py
-```
-or with the Windows launcher:
-```bash
-py main.py
-```
-
-On Linux / macOS:
-```bash
-python3 main.py
-```
-
-### 2. Run the Test Suite
-
-Execute the unit test suite:
-
-```bash
-python -m unittest discover -s tests -v
-```
-
-On Linux / macOS:
-```bash
-python3 -m unittest discover -s tests -v
-```
-
----
-
-## Route Network and Distances
-
-All routes work in either direction:
+All routes are bidirectional:
 
 | Route | Distance |
 |---|---:|
@@ -96,11 +92,11 @@ All routes work in either direction:
 
 ---
 
-## Train Types and Travel Classes
+## Train Types & Travel Classes
 
 ### Train Types
 
-| Train Type | Speed | Multiplier | Surcharge |
+| Train Type | Average Speed | Multiplier | Flat Surcharge |
 |---|---:|---:|---:|
 | Superfast | 120 km/h | 1.50x | INR 100.00 |
 | Express | 110 km/h | 1.25x | INR 50.00 |
@@ -118,18 +114,18 @@ All routes work in either direction:
 
 ---
 
-## Fare Calculation Steps
+## Six-Step Fare Calculation Order
 
-Each passenger's fare is calculated in the following order:
+Individual passenger fares are calculated in the following order:
 
 1. **Step 1 - Slab Fare**:
-   - Base fare = INR 100.00
+   - Fixed base fare = INR 100.00
    - First 100 km: INR 1.00 per km
    - 101 to 300 km: INR 0.80 per km
    - Beyond 300 km: INR 0.60 per km
 
 2. **Step 2 - Senior Citizen Discount**:
-   - If passenger age is strictly greater than 60 (`age > 60`), apply a 40% discount to Step 1 fare (`Step 1 fare * 0.60`).
+   - If passenger age is strictly greater than 60 (`age > 60`), apply a 40% discount to the Step 1 fare (`Step 1 fare * 0.60`).
    - If 60 or below, no discount is applied.
 
 3. **Step 3 - Train Premium**:
@@ -139,9 +135,9 @@ Each passenger's fare is calculated in the following order:
    - Multiply the Step 3 fare by the travel class multiplier (1.0x, 1.5x, or 2.0x).
 
 5. **Step 5 - Excess Baggage Fee**:
-   - If baggage exceeds the class allowance, charge INR 15 per excess kg:
+   - If luggage exceeds the class allowance, charge INR 15 per excess kg:
      `Excess Fee = (Weight - Allowance) * 15`
-   - Added to Step 4 fare.
+   - Added to the Step 4 fare.
 
 6. **Step 6 - Flat Train Surcharge**:
    - Add flat train surcharge based on service (Superfast: INR 100, Express: INR 50, Fast Passenger: INR 0).
@@ -150,11 +146,12 @@ Each passenger's fare is calculated in the following order:
 
 ## Promotional Codes
 
-Applied to the booking subtotal:
+Applied after summing all passenger fares into the booking subtotal:
 
-- **`ADG20`**: 20% discount on booking subtotal (`Subtotal * 0.20`).
+- **`ADG20`**: 20% discount on the booking subtotal (`Subtotal * 0.20`).
 - **`WINTER500`**: Flat INR 500 discount (`min(Subtotal, 500)`).
-- Promo codes are case-insensitive. Blank entries proceed without a promo.
+- Promo codes are case-insensitive. Blank entries proceed without a discount.
+- The final total is never negative.
 
 ---
 
